@@ -1,33 +1,37 @@
 <?php
-
+define('ROOT', getcwd());
 define('MODULE', 'Module');
 
 spl_autoload_register(function($class)
 {
+	$include = ROOT.'/';
 	if(substr($class, -strlen(MODULE)) == MODULE)
-		include('modules/'.$class.'.php');
+		$include .= 'modules/'.$class.'.php';
 	else
-		include $class.'.php';
+		$include .= $class.'.php';
+	
+	if (!file_exists($include))
+		throw new Exception('Could not load '.$class.', Full path: '.$include);
+	else
+		include($include);
 });
 
-class OmniaMirror extends Base
+class Mirror extends Base
 {
-	public $github;
-	private $root;
+	private $github;
+	private $githubUrl;
+	private $actions;
 	
-	// Protected
-	protected $lastOutput;
-	
-	function __construct($root = false)
+	function __construct($github, $actions)
 	{
-		parent::__construct();
-		$this->root = !$root ? getcwd() : $root;
-		$this->github = new Github($this->getConfig('github', 'user'), $this->getConfig('github', 'password'));	
+		$this->github = new Github($github->user, $github->password);
+		$this->githubUrl = $github->url;
+		$this->actions = $actions;
 	}
 	
 	private function dirRepos()
 	{
-		$r = $this->root.'/'.REPOS;
+		$r = ROOT.'/repositories/'.$this->github->getUser();
 		if (!is_dir($r))
 			mkdir($r);
 		return $r;
@@ -35,7 +39,33 @@ class OmniaMirror extends Base
 	
 	private function dirRepo($repo)
 	{
-		return $this->dirRepos().'/'.$repo;
+		return $this->dirRepos().'/'.trim($repo, '/');
+	}
+	
+	function run()
+	{
+		// Get all cron jobs
+		$this->updateRepositories();
+		
+		// Go trough all crons and run them if due
+		foreach ($this->actions as $action)
+		{
+			printf("    Running module %s for %s/%s\n", $action->module, $action->repository, $acion->branch);
+			$module = new $action->module($action->arguments);
+			
+			if ($action->repository == '*')
+			{
+				$this->forallRepositories($action->branch, $module);
+			}
+			elseif ($action->branch == '*')
+			{
+				$this->forallBranches($action->repository, $module);
+			}
+			else
+			{
+				$this->forBranch($action->repository, $action->branch, $module);
+			}
+		}
 	}
 	
     /**
@@ -62,7 +92,7 @@ class OmniaMirror extends Base
      * 
      * @return array    List of branches
      */	
-	public function getBranches($repository)
+	private function getBranches($repository)
 	{
 		if (!chdir($this->dirRepo($repository)))
 			return false;
@@ -82,61 +112,61 @@ class OmniaMirror extends Base
 		return $ret;
 	}
 	
-	public function checkRepository($name)
+	public function updateRepositories()
 	{
 		$repos = $this->github->getRepositories();
 		foreach ($repos as &$repo)
 		{
-			if ($name == $repo->name)
-			{
-				$this->initializeRepository($repo->name, $repo->ssh_url);
-			}
+			$this->updateRepository($repo->name, $repo->owner->login, $repo->ssh_url);
 		}
 	}
 	
-	public function initializeRepository($name, $ssh)
+	public function updateRepository($name, $user)
 	{
 		if(is_dir($this->dirRepo($name).'/.git'))
 		{
 			chdir($this->dirRepo($name));
-			$this->execute('git fetch -p --all -q');
+			$this->execute('git fetch -p --all');
 			return true;
 		}
 		chdir($this->dirRepos());
-		$this->execute('git clone '.str_replace(GITHUB, MYGITHUB, $ssh).' '.$name);
+		$this->execute('git clone '.$this->github->getUrl($user.'/'.$name.'.git'));
 	}
 	
-
-	public function updateRepositories()
+	
+	public function forallRepositories($branch = '*', $module)
 	{
 		$repos = $this->github->getRepositories();
-		foreach($repos as &$repo)
+		foreach ($repos as &$repo)
 		{
-			$this->initializeRepository($repo->name, $repo->ssh_url);
-			$this->updateBranches($repo->name);
+			if ($branch == '*')
+			{
+				$this->forallBranches($repo->name, $module);
+			}
+			else
+			{
+				$this->forBranch($repo->name, $branch, $module);
+			}
 		}
 	}
 	
-	public function updateBranches($repository)
+	public function forallBranches($repository, $module)
 	{
 		$branches = $this->getBranches($repository);
-		foreach($branches as $branch)
+		foreach ($branches as $branch)
 		{
-			echo "Updating ".$repository."/".$branch."\n";
-			if(!$this->updateBranch($repository, $branch))
-				echo 'Failed to update branch'."\n";
-			if(!$this->generateDoc($repository, $branch))
-				echo 'Failed to generate docs'."\n";
+			$this->forBranch($repository, $branch, $module);
+		}
+	}
+	
+	public function forBranch($repository, $branch, $module)
+	{
+		if ($this->updateBranch($repository, $branch))
+		{
+			call_user_func(array($module, 'run'), $this->dirRepo($repository));
 		}
 	}
 
-	public function autoUpdate()
-	{
-		chdir($this->root);
-		$this->execute('git pull');
-		return $this->execute('git rev-parse HEAD');
-	}
-	
 	/**
 	 * Update branch
 	 *
@@ -155,7 +185,7 @@ class OmniaMirror extends Base
 			return false;
 			
 		// Checkout this branch and reset it to mirror remote
-		$e = $this->execute('git checkout -q --force '.$branch);
+		$e = $this->execute('git checkout --force '.$branch);
 		if($e[0] == 'e')
 			return false;
 		
@@ -174,7 +204,26 @@ class OmniaMirror extends Base
 		// Assume success
 		return true;
 	}
-	
+}
+
+class OmniaMirror extends Base
+{
+	function run()
+	{
+		// Get all cron jobs
+		$actions = $this->getActions();
+		printf("%d account acction(s)\n", count($actions));
+		
+		// Go trough all crons and run them if due
+		foreach ($actions as $key => $action)
+		{
+			printf("  Executing (%d) jobs for %s\n", count($action->actions), $key);
+			
+			$mirror = new Mirror($action->github, $action->actions);
+			$mirror->run();
+		}	
+	}
+		
 	/**
 	 * Parses the omniashell cron
 	 *
@@ -199,24 +248,39 @@ class OmniaMirror extends Base
 			if (empty($l)) continue;
 			if ($l[0] == '#') continue;
 			
-			// Explode it and slice it
+			// Explode it and check
 			$parts = explode(' ', $l);
+			
+			if(!$this->getConfig('github', $parts[0]))
+				continue;
+			
+			// Build action object
 			$action = array(
-				'repository' => $parts[0],
-				'branch' => $parts[1],
-				'module' => $parts[2],
-				'arguments' =>  array_slice($parts, 3),
+				'repository' => $parts[1],
+				'branch' => $parts[2],
+				'module' => $parts[3],
+				'arguments' =>  array_slice($parts, 4),
 			);
 			
 			// Check if enough arguments (5 time and 1 module) at least
 			if (count($parts) < 3) continue; // Malformed line so skip
 					
 			// Add it to the list
-			$return[] = (object) $action;
+			if (!array_key_exists($parts[0], $return))
+				$return[$parts[0]] = (object) array(
+					'github' => (object) array(
+						'user' => $this->getConfig('github', $parts[0], 'user'),
+						'password' => $this->getConfig('github', $parts[0], 'password'),
+						'url' => $this->getConfig('github', $parts[0], 'url'),
+					),
+					'actions' => array(),
+				);
+			
+			$return[$parts[0]]->actions[] = (object) $action;
 		}
 		return $return;
 	}
 }
 
 $m = new OmniaMirror;
-print_r($m->getActions());
+$m->run();

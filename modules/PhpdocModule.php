@@ -3,6 +3,11 @@
 class PhpdocModule extends Module
 {
 
+	public function run($path)
+	{
+		print_r($path);
+	}
+	
 	/**
 	 * Clean repository
 	 *

@@ -4,10 +4,18 @@ class Github
 	private $user;
 	private $password;
 	
+	private $cache;
+	
 	public function __construct($user, $password)
 	{
 		$this->user = $user;
 		$this->password = $password;	
+		$this->cache = array();
+	}
+	
+	public function getUser()
+	{
+		return $this->user;
 	}
 	
     /**
@@ -17,7 +25,7 @@ class Github
      * 
      * @return string
      */
-	private function getUrl($action)
+	public function getUrl($action)
 	{
 		return 'https://'.$this->user.':'.$this->password.'@api.github.com/'.trim($action, '/');
 	}
@@ -31,7 +39,9 @@ class Github
      */
 	private function get($action)
 	{
-		return json_decode(file_get_contents($this->getUrl($action)));
+		if (!array_key_exists($action, $this->cache))
+			$this->cache[$action] = json_decode(file_get_contents($this->getUrl($action)));
+		return $this->cache[$action];
 	}
 	
 	/**
@@ -62,7 +72,7 @@ class Github
 	}
 	
 	public function getHooks($repository)
-	{
+	{ 
 		return $this->get('/repos/'.$this->user.'/'.$repository.'/hooks');
 	}
 	

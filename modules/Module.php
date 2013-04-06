@@ -1,8 +1,13 @@
 <?php
 
-class Module extends Base
+abstract class Module extends Base
 {
+	function __construct($arguments)
+	{
+		parent::__construct($arguments);
+		
+	}
 
-
+	abstract public function run($path);
 
 }
