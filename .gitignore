@@ -1,4 +1,5 @@
 _notes
-config.php
 repositories/*
-docs/*
+conf.d/*
+!conf.d/*.dist.ini
+!conf.d/*.conf

@@ -22,14 +22,14 @@ class OmniaMirror extends Base
 	{
 		parent::__construct();
 		$this->root = !$root ? getcwd() : $root;
-		//$this->github = new Github(GITHUB_USER, GITHUB_PASSWORD);	
+		$this->github = new Github($this->getConfig('github', 'user'), $this->getConfig('github', 'password'));	
 	}
 	
 	private function dirRepos()
 	{
 		$r = $this->root.'/'.REPOS;
-		if(!is_dir($r))
-			kdir($r);
+		if (!is_dir($r))
+			mkdir($r);
 		return $r;
 	}
 	
@@ -48,9 +48,8 @@ class OmniaMirror extends Base
 	public function getHash($repository)
 	{
 		// Check if dir exists
-		if(!chdir($this->dirRepo($repository)))
+		if (!chdir($this->dirRepo($repository)))
 			return false;
-			
 		return $this->execute('git rev-parse HEAD');
 	}
 	
@@ -65,7 +64,7 @@ class OmniaMirror extends Base
      */	
 	public function getBranches($repository)
 	{
-		if(!chdir($this->dirRepo($repository)))
+		if (!chdir($this->dirRepo($repository)))
 			return false;
 		
 		$branches = $this->execute('git for-each-ref refs/remotes --format=\'%(refname)\' | sed \'s/refs\/remotes\/origin\///g\'');
@@ -74,9 +73,10 @@ class OmniaMirror extends Base
 		
 		$ret = array();
 		
-		foreach($branches as $branch)
+		foreach ($branches as $branch)
 		{
-			if(strtolower($branch) == 'head') continue;	
+			if (strtolower($branch) == 'head')
+				continue;	
 			$ret[] = trim($branch);
 		}
 		return $ret;
@@ -85,12 +85,13 @@ class OmniaMirror extends Base
 	public function checkRepository($name)
 	{
 		$repos = $this->github->getRepositories();
-		foreach($repos as &$repo)
-			if($name == $repo->name)
+		foreach ($repos as &$repo)
+		{
+			if ($name == $repo->name)
 			{
 				$this->initializeRepository($repo->name, $repo->ssh_url);
-				$this->cleanRepository($repo->name);
 			}
+		}
 	}
 	
 	public function initializeRepository($name, $ssh)
@@ -173,12 +174,49 @@ class OmniaMirror extends Base
 		// Assume success
 		return true;
 	}
+	
+	/**
+	 * Parses the omniashell cron
+	 *
+	 * @return array An array('cron', 'module', 'args') which contains all information about the job
+	 */
+	function getActions()
+	{
+		// The return array with all Cron object and module + arguments
+		$return = array();
+		
+		// Get file contents
+		$crontents = file_get_contents('conf.d/actions.conf');
+		$lines = preg_split('/\r\n|\r|\n/', $crontents);
+		
+		// Parse all the lines
+		foreach ($lines as &$l)
+		{
+			// Preprocess the line
+			$l = preg_replace('!\s+!', ' ', trim($l));
+			
+			// Skip empty and comment lines
+			if (empty($l)) continue;
+			if ($l[0] == '#') continue;
+			
+			// Explode it and slice it
+			$parts = explode(' ', $l);
+			$action = array(
+				'repository' => $parts[0],
+				'branch' => $parts[1],
+				'module' => $parts[2],
+				'arguments' =>  array_slice($parts, 3),
+			);
+			
+			// Check if enough arguments (5 time and 1 module) at least
+			if (count($parts) < 3) continue; // Malformed line so skip
+					
+			// Add it to the list
+			$return[] = (object) $action;
+		}
+		return $return;
+	}
 }
 
 $m = new OmniaMirror;
-$m1 = new PhpdocModule;
-if($m->getCmd('work'))
-{
-	echo 'workit';
-}
-echo $m->getCmd('cat-work');
+print_r($m->getActions());

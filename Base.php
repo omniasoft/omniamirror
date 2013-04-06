@@ -4,10 +4,12 @@ class Base
 {
 	
 	private $arguments;
+	private $configCache;
 	
 	public function __construct($parse = true)
 	{
 		global $argc, $argv;
+		$this->configCache = array();
 		if ($parse)
 		{
 			$this->parseCmd($argv);
@@ -55,5 +57,21 @@ class Base
 	public function getCmd($index)
 	{
 		return array_key_exists($index, $this->arguments) ? $this->arguments[$index] : false;
+	}
+	
+	/**
+	 * Get a config value
+	 *
+	 * @return string If key not exists returns null else the value of the key in the ini
+	 */
+	protected function getConfig($name, $key)
+	{
+		if (!array_key_exists($name, $this->configCache))
+			$this->configCache[$name] = @parse_ini_file('conf.d/'.$name.'.ini');
+
+		if (!is_array($this->configCache[$name]))
+			throw new Exception('Configuration file does not exists');
+		
+		return (array_key_exists($key, $this->configCache[$name]) ? $this->configCache[$name][$key] : null);
 	}
 }
