@@ -1,6 +1,6 @@
 <?php
 
-class Module
+class Module extends Base
 {
 
 

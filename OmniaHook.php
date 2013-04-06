@@ -1,7 +1,7 @@
 <?php
 include('config.php');
 
-class OmniaHook
+class OmniaHook extends Base
 {
 	public $github;
 	private $root;
@@ -15,45 +15,11 @@ class OmniaHook
 		$this->github = new Github(GITHUB_USER, GITHUB_PASSWORD);	
 	}
 	
-	/**
-	 * Gets the last message of a execute call
-	 *
-	 * @return string Output of the last executed command
-	 */
-	public function getLastOutput()
-	{
-		if(empty($this->lastOutput))
-			return false;
-		return $this->lastOutput;
-	}
-	
-	/**
-	 * Execute a shell command
-	 *
-	 * And redirects errors to the return of this function
-	 *
-	 * @param string The linux command
-	 * @param bool Redirect STDERROR to script (default true)
-	 * @return bool True if the command had no output and false otherwise
-	 */
-	protected function execute($command, $catchError = true)
-	{
-		$cmd = $command.($catchError ? ' 2>&1' : ' > /dev/null 2>/dev/null &');
-		$this->lastOutput = trim(`$cmd`);
-		return $this->lastOutput;
-	}
-	
 	private function dirRepos()
 	{
 		$r = $this->root.'/'.REPOS;
-		if(!is_dir($r)) mkdir($r);
-		return $r;
-	}
-
-	private function dirDocs()
-	{
-		$r = $this->root.'/'.DOCS;
-		if(!is_dir($r)) mkdir($r);
+		if(!is_dir($r))
+			kdir($r);
 		return $r;
 	}
 	
@@ -62,12 +28,14 @@ class OmniaHook
 		return $this->dirRepos().'/'.$repo;
 	}
 	
-	private function dirDoc($repo, $branch)
-	{
-		return $this->dirDocs().'/'.$repo.'/'.$branch;
-	}
-	
-	public function getLastCommit($repository)
+    /**
+     * Get hash
+     * 
+     * @param string    $repository 
+     * 
+     * @return string   The last hash for this repository
+     */	
+	public function getHash($repository)
 	{
 		// Check if dir exists
 		if(!chdir($this->dirRepo($repository)))
@@ -76,6 +44,15 @@ class OmniaHook
 		return $this->execute('git rev-parse HEAD');
 	}
 	
+    /**
+     * Get branches
+     * 
+	 * Get all branches for a specefic repository
+	 *
+     * @param string    $repository 
+     * 
+     * @return array    List of branches
+     */	
 	public function getBranches($repository)
 	{
 		if(!chdir($this->dirRepo($repository)))
@@ -118,38 +95,7 @@ class OmniaHook
 		$this->execute('git clone '.str_replace(GITHUB, MYGITHUB, $ssh).' '.$name);
 	}
 	
-	/**
-	 * Clean repository
-	 *
-	 * Removes all branches from the documentation when they are not longer
-	 * on the remote.
-	 *
-	 * @param string	$repository		The repository name (case sensitive)
-	 *
-	 * @return int      The amount of branches deleted (so false if nothing, else true)
-	 */
-	public function cleanRepository($repository)
-	{
-		$deleteNo = 0;
-		
-		// Get local branches
-		$localBranches = array_diff(scandir($this->dirDocs().'/'.$repository), array('.', '..'));
-		foreach($localBranches as $key => $dir)
-			if(!is_dir($this->dirDoc($repository, $dir)))
-				unset($localBranches[$key]);
-		
-		// Get remote branches
-		$branches = $this->getBranches($repository);
-		foreach($localBranches as $branch)
-			if(!in_array($branch, $branches))
-			{
-				// This branch does not exist remote so delete it
-				$this->execute('rm -rf '.$this->dirDoc($repository, $branch));
-				$deleteNo++;
-			}
-		return $deleteNo;
-	}
-	
+
 	public function updateRepositories()
 	{
 		$repos = $this->github->getRepositories();
@@ -181,9 +127,9 @@ class OmniaHook
 	}
 	
 	/**
-	 * Update branche
+	 * Update branch
 	 *
-	 * Updates a specefic branch in a repository to mirror the remote
+	 * Updates a specific branch in a repository to mirror the remote
 	 * Also updates submodules
 	 *
 	 * @param string	$repository		The repository name (case sensitive)
@@ -199,12 +145,12 @@ class OmniaHook
 			
 		// Checkout this branch and reset it to mirror remote
 		$e = $this->execute('git checkout -q --force '.$branch);
-		if(substr($e, 0, 1) == 'e') return false;
+		if($e[0] == 'e')
+			return false;
 		
+		// Hard mirror it
 		$this->execute('git reset --hard');
 		$this->execute('git clean -f -d');
-		
-		// Update the branch
 		$this->execute('git pull -q --force');
 		
 		// Check if it has submodules
@@ -213,23 +159,12 @@ class OmniaHook
 			$this->execute('git submodule init -q');
 			$this->execute('git submodule foreach --recursive git pull --force');
 		}
+		
+		// Assume success
 		return true;
 	}
 	
-	public function kill($pid)
-	{
-		$this->execute('kill '.$pid);	
-	}
+
 	
-	public function generateDoc($repository, $branch)
-	{
-		$dir = $this->dirRepo($repository);
-		// Check if dir exists
-		if(!chdir($dir))
-			return false;
-		$str = 'phpdoc -d '.$dir.' -t '.$this->dirDoc($repository, $branch);
-		$this->execute($str, false);
-		$pid = $this->execute('ps  -A x | grep "'.$str.'" | grep -v grep | nawk \'{print $1}\'');
-		return $pid;
-	}
+
 }
