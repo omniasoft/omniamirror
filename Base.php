@@ -3,6 +3,17 @@
 class Base
 {
 	
+	private $arguments;
+	
+	public function __construct($parse = true)
+	{
+		global $argc, $argv;
+		if ($parse)
+		{
+			$this->parseCmd($argv);
+		}
+	}
+	
 	/**
 	 * Execute a shell command
 	 *
@@ -18,8 +29,31 @@ class Base
 		return trim(`$cmd`);
 	}
 
-	public function kill($pid, $force = false)
+	static public function kill($pid, $force = false)
 	{
 		return $this->execute('kill'.($force ? ' -9 ' : ' ').$pid);
+	}
+	
+	private function parseCmd($argv)
+	{
+		$this->arguments = array();
+		for ($i = 1; $i < count($argv); $i++)
+		{
+			// Flag var
+			if (preg_match('/^-+(.*?)$/', $argv[$i], $match))
+			{
+				$args = explode('=', $match[1]);
+				$this->arguments[$args[0]] = (count($args) == 2 ? $args[1] : true);		
+			}
+			else
+			{
+				$this->arguments[] = $argv[$i];
+			}		
+		}
+	}
+	
+	public function getCmd($index)
+	{
+		return array_key_exists($index, $this->arguments) ? $this->arguments[$index] : false;
 	}
 }

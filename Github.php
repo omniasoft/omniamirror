@@ -1,6 +1,4 @@
 <?php
-include('config.php');
-
 class Github
 {
 	private $user;

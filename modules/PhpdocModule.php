@@ -1,6 +1,6 @@
 <?php
 
-class PhpdocModule
+class PhpdocModule extends Module
 {
 
 	/**

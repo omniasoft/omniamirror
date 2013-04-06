@@ -1,5 +1,14 @@
 <?php
-include('config.php');
+
+define('MODULE', 'Module');
+
+spl_autoload_register(function($class)
+{
+	if(substr($class, -strlen(MODULE)) == MODULE)
+		include('modules/'.$class.'.php');
+	else
+		include $class.'.php';
+});
 
 class OmniaMirror extends Base
 {
@@ -11,8 +20,9 @@ class OmniaMirror extends Base
 	
 	function __construct($root = false)
 	{
+		parent::__construct();
 		$this->root = !$root ? getcwd() : $root;
-		$this->github = new Github(GITHUB_USER, GITHUB_PASSWORD);	
+		//$this->github = new Github(GITHUB_USER, GITHUB_PASSWORD);	
 	}
 	
 	private function dirRepos()
@@ -163,8 +173,12 @@ class OmniaMirror extends Base
 		// Assume success
 		return true;
 	}
-	
-
-	
-
 }
+
+$m = new OmniaMirror;
+$m1 = new PhpdocModule;
+if($m->getCmd('work'))
+{
+	echo 'workit';
+}
+echo $m->getCmd('cat-work');
