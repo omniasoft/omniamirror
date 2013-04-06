@@ -1,7 +1,7 @@
 <?php
 include('config.php');
 
-class OmniaHook extends Base
+class OmniaMirror extends Base
 {
 	public $github;
 	private $root;
