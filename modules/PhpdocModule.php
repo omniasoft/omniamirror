@@ -2,7 +2,6 @@
 
 class PhpdocModule extends Module
 {
-
 	public function run($repository, $branch, $path)
 	{
 		printf("       Job for %s/%s with path %s\n", $repository, $branch, basename($path));
@@ -39,14 +38,21 @@ class PhpdocModule extends Module
 			}
 		return $deleteNo;
 	}
-	
-	public function generateDoc($repository, $branch)
+
+    /**
+     * Generates doc
+     * 
+     * @param string $input 
+     * @param string $output 
+     * 
+     * @return int
+     */	
+	public function generateDoc($input, $output)
 	{
-		$dir = $this->dirRepo($repository);
 		// Check if dir exists
-		if(!chdir($dir))
+		if(!chdir($input))
 			return false;
-		$str = 'phpdoc -d '.$dir.' -t '.$this->dirDoc($repository, $branch);
+		$str = 'phpdoc -d '.$input.' -t '.$output;
 		$this->execute($str, false);
 		$pid = $this->execute('ps  -A x | grep "'.$str.'" | grep -v grep | nawk \'{print $1}\'');
 		return $pid;

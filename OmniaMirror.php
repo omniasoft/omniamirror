@@ -18,6 +18,11 @@ spl_autoload_register(function($class)
 
 class OmniaMirror extends Base
 {
+
+    /**
+     * Runs the omniamirror
+     * 
+     */	
 	function run()
 	{
 		// Get all cron jobs
@@ -35,9 +40,9 @@ class OmniaMirror extends Base
 	}
 		
 	/**
-	 * Parses the omniashell cron
+	 * Parses the OmniaMirror conf file
 	 *
-	 * @return array An array('cron', 'module', 'args') which contains all information about the job
+	 * @return object An object which contains all information about the job
 	 */
 	function getActions()
 	{
@@ -81,7 +86,6 @@ class OmniaMirror extends Base
 					'github' => (object) array(
 						'user' => $this->getConfig('github', $parts[0], 'user'),
 						'password' => $this->getConfig('github', $parts[0], 'password'),
-						'url' => $this->getConfig('github', $parts[0], 'url'),
 					),
 					'actions' => array(),
 				);

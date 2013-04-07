@@ -6,6 +6,11 @@ class Base
 	private $arguments;
 	private $configCache;
 	
+    /**
+     * Constructor
+     * 
+     * @param array $default overloaded if you want to pass your own arguments instead of default argv
+     */	
 	public function __construct($default = true)
 	{
 		global $argc, $argv;
@@ -27,12 +32,25 @@ class Base
 		$cmd = $command.($catchError ? ' 2>&1' : ' > /dev/null 2>/dev/null &');
 		return trim(`$cmd`);
 	}
-
+	
+    /**
+     * Kills a process by using the linux kill command
+     * 
+     * @param int $pid 
+     * @param bool $force  
+     * 
+     * @return string
+     */	
 	static public function kill($pid, $force = false)
 	{
 		return $this->execute('kill'.($force ? ' -9 ' : ' ').$pid);
 	}
 	
+    /**
+     * Parses command line arguments passed to class
+     * 
+     * @param array $arguments 
+     */	
 	private function parseCmd($arguments)
 	{
 		$this->arguments = array();
@@ -51,16 +69,27 @@ class Base
 		}
 	}
 	
+    /**
+     * Get the value for a command line flag
+     * 
+     * @param mixed $index 
+     * 
+     * @return mixed
+     */
 	public function getCmd($index)
 	{
 		return array_key_exists($index, $this->arguments) ? $this->arguments[$index] : false;
 	}
 	
-	/**
-	 * Get a config value
-	 *
-	 * @return string If key not exists returns null else the value of the key in the ini
-	 */
+    /**
+     * Gets a configuration value from the config ini
+     * 
+     * @param string $name 
+     * @param string $section 
+     * @param string $key  
+     * 
+     * @return string If key not exists returns null else the value of the key in the ini
+     */	
 	protected function getConfig($name, $section, $key = null)
 	{
 		if (!array_key_exists($name, $this->configCache))

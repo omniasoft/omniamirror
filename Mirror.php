@@ -3,16 +3,26 @@
 class Mirror extends Base
 {
 	private $github;
-	private $githubUrl;
 	private $actions;
 	
+    /**
+     * Constructor
+     * 
+     * @param object $github 
+     * @param object $actions 
+     */	
 	function __construct($github, $actions)
 	{
 		$this->github = new Github($github->user, $github->password);
-		$this->githubUrl = $github->url;
 		$this->actions = $actions;
 	}
 	
+    /**
+     * Gets the full path to the repositories directory
+     * 
+     * 
+     * @return string
+     */
 	private function dirRepos()
 	{
 		$r = ROOT.'/repositories/'.$this->github->getUser();
@@ -21,11 +31,22 @@ class Mirror extends Base
 		return $r;
 	}
 	
+    /**
+     * Gets the full path to a repository
+     * 
+     * @param string $repo 
+     * 
+     * @return string
+     */
 	private function dirRepo($repo)
 	{
 		return $this->dirRepos().'/'.trim($repo, '/');
 	}
 	
+    /**
+     * The main run loop
+     * 
+     */
 	function run()
 	{
 		// Get all cron jobs
@@ -35,7 +56,7 @@ class Mirror extends Base
 		foreach ($this->actions as &$action)
 		{
 			printf("    Running module %s for %s/%s\n", $action->module, $action->repository, $action->branch);
-			$module = new $action->module($action->arguments);
+			$module = new $action->module($this->github, $action->arguments);
 			
 			if ($action->repository == '*')
 			{
@@ -96,6 +117,10 @@ class Mirror extends Base
 		return $ret;
 	}
 	
+    /**
+     * Updates all repositories you have on github
+     * 
+     */	
 	public function updateRepositories()
 	{
 		$repos = $this->github->getRepositories();
@@ -105,6 +130,16 @@ class Mirror extends Base
 		}
 	}
 	
+    /**
+     * Updates a repository
+     * 
+	 * Updates or clones a repository through https with url user:pass
+	 *
+     * @param string $name 
+     * @param string $user 
+     * 
+     * @return mixed
+     */	
 	public function updateRepository($name, $user)
 	{
 		if(is_dir($this->dirRepo($name).'/.git'))
@@ -114,10 +149,16 @@ class Mirror extends Base
 			return true;
 		}
 		chdir($this->dirRepos());
-		$this->execute('git clone '.$this->github->getUrl($user.'/'.$name.'.git'));
+		return $this->execute('git clone '.$this->github->getUrl($user.'/'.$name.'.git'));
 	}
 	
 	
+    /**
+     * Do for all repositories
+     * 
+     * @param string $branch (can be wildcard * to match all branches)
+     * @param Module $module
+     */
 	public function forallRepositories($branch = '*', $module)
 	{
 		$repos = $this->github->getRepositories();
@@ -134,6 +175,12 @@ class Mirror extends Base
 		}
 	}
 	
+    /**
+     * Do for all branches in a specefic repository
+     * 
+     * @param string $repository 
+     * @param Module $module 
+     */	
 	public function forallBranches($repository, $module)
 	{
 		$branches = $this->getBranches($repository);
@@ -143,6 +190,13 @@ class Mirror extends Base
 		}
 	}
 	
+    /**
+     * Do module for a specefic branch in a repository
+     * 
+     * @param string $repository 
+     * @param string $branch 
+     * @param Module $module 
+     */
 	public function forBranch($repository, $branch, $module)
 	{
 		if ($this->updateBranch($repository, $branch))

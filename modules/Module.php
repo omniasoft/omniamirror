@@ -2,10 +2,12 @@
 
 abstract class Module extends Base
 {
-	function __construct($arguments)
+	protected $github;
+	
+	function __construct($github, $arguments)
 	{
 		parent::__construct($arguments);
-		
+		$this->github = $github;
 	}
 
 	abstract public function run($repository, $branch, $path);
