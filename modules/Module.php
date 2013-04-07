@@ -8,6 +8,5 @@ abstract class Module extends Base
 		
 	}
 
-	abstract public function run($path);
-
+	abstract public function run($repository, $branch, $path);
 }

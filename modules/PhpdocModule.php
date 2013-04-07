@@ -3,9 +3,9 @@
 class PhpdocModule extends Module
 {
 
-	public function run($path)
+	public function run($repository, $branch, $path)
 	{
-		print_r($path);
+		printf("       Job for %s/%s with path %s\n", $repository, $branch, basename($path));
 	}
 	
 	/**
