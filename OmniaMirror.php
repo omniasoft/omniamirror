@@ -23,7 +23,7 @@ class OmniaMirror extends Base
      * Runs the omniamirror
      * 
      */	
-	function run()
+	function run($gitpayload)
 	{
 		// Get all cron jobs
 		$actions = $this->getActions();
@@ -35,7 +35,7 @@ class OmniaMirror extends Base
 			printf("  Executing (%d) jobs for %s\n", count($action->actions), $key);
 			
 			$mirror = new Mirror($action->github, $action->actions);
-			$mirror->run();
+			$mirror->run($gitpayload);
 		}	
 	}
 		
@@ -95,6 +95,3 @@ class OmniaMirror extends Base
 		return $return;
 	}
 }
-
-$m = new OmniaMirror;
-$m->run();

@@ -11,7 +11,7 @@ class Mirror extends Base
      * @param object $github 
      * @param object $actions 
      */	
-	function __construct($github, $actions)
+	function __construct($github, $actions = array())
 	{
 		$this->github = new Github($github->user, $github->password);
 		$this->actions = $actions;
@@ -25,7 +25,10 @@ class Mirror extends Base
      */
 	private function dirRepos()
 	{
-		$r = ROOT.'/repositories/'.$this->github->getUser();
+		$r = ROOT.'/repositories/';
+		if (!is_dir($r))
+			mkdir($r);
+		$r .= $this->github->getUser();
 		if (!is_dir($r))
 			mkdir($r);
 		return $r;
@@ -47,32 +50,33 @@ class Mirror extends Base
      * The main run loop
      * 
      */
-	function run()
-	{
-		// Get all cron jobs
-		//$this->updateRepositories();
-		
+	function run($gitpayload)
+	{	
 		// Go trough all crons and run them if due
 		foreach ($this->actions as &$action)
-		{
-			printf("    Running module %s for %s/%s\n", $action->module, $action->repository, $action->branch);
-			$module = new $action->module($this->github, $action->arguments);
+		{		
+			if ($action->repository == '*' || $action->repository == $gitpayload->repository)
+			{
+				if ($action->branch == '*' || $action->branch == $gitpayload->branch)
+				{
+					// Print
+					printf("    Running module %s for %s/%s\n", $action->module, $gitpayload->repository, $gitpayload->branch);
+					$module = new $action->module($this->github, $action->arguments);
 			
-			if ($action->repository == '*')
-			{
-				$this->forallRepositories($action->branch, $module);
-			}
-			elseif ($action->branch == '*')
-			{
-				$this->forallBranches($action->repository, $module);
-			}
-			else
-			{
-				$this->forBranch($action->repository, $action->branch, $module);
+					
+					// Update the branch and do it
+					if ( ! $this->updateRepository($gitpayload->repository, $gitpayload->owner))
+					{
+						printf("    failed to update the repo, quiting\n");
+					}
+					else
+					{
+						$this->forBranch($gitpayload->repository, $gitpayload->branch, $module);
+					}
+				}
 			}
 		}
 	}
-	
     /**
      * Get hash
      * 
@@ -149,7 +153,8 @@ class Mirror extends Base
 			return true;
 		}
 		chdir($this->dirRepos());
-		return $this->execute('git clone '.$this->github->getUrl($user.'/'.$name.'.git'));
+		$ret = $this->execute('git clone '.$this->github->getUrl($user.'/'.$name.'.git'));
+		return ($ret[0] != 'f');
 	}
 	
 	
@@ -219,16 +224,17 @@ class Mirror extends Base
 	public function updateBranch($repository, $branch)
 	{
 		// Check if dir exists
-		if(!chdir($this->dirRepo($repository)))
+		if( ! is_dir($this->dirRepo($repository)))
 			return false;
-			
+		chdir($this->dirRepo($repository));
+		
 		// Checkout this branch and reset it to mirror remote
 		$e = $this->execute('git checkout --force '.$branch);
 		if($e[0] == 'e')
 			return false;
 		
 		// Hard mirror it
-		$this->execute('git reset --hard');
+		$this->execute('git reset --hard origin/HEAD');
 		$this->execute('git clean -f -d');
 		$this->execute('git pull -q --force');
 		

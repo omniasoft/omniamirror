@@ -15,7 +15,7 @@ class Base
 	{
 		global $argc, $argv;
 		$this->configCache = array();
-		$this->parseCmd(is_array($default) ? $default : array_slice($argv, 1));
+		$this->parseCmd(is_array($default) ? $default : (($argc >= 1) ? array_slice($argv, 1) : null));
 	}
 	
 	/**
@@ -54,6 +54,10 @@ class Base
 	private function parseCmd($arguments)
 	{
 		$this->arguments = array();
+		
+		if( ! is_array($arguments))
+			return;
+			
 		foreach ($arguments as &$argument)
 		{
 			// Flag var
@@ -90,7 +94,7 @@ class Base
      * 
      * @return string If key not exists returns null else the value of the key in the ini
      */	
-	protected function getConfig($name, $section, $key = null)
+	public function getConfig($name, $section, $key = null)
 	{
 		if (!array_key_exists($name, $this->configCache))
 			$this->configCache[$name] = @parse_ini_file('conf.d/'.$name.'.ini', true);
