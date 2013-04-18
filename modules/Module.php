@@ -10,5 +10,5 @@ abstract class Module extends Base
 		$this->github = $github;
 	}
 
-	abstract public function run($repository, $branch, $path);
+	abstract public function run($info);
 }

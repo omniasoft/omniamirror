@@ -97,17 +97,25 @@ class Base
 	public function getConfig($name, $section, $key = null)
 	{
 		if (!array_key_exists($name, $this->configCache))
-			$this->configCache[$name] = @parse_ini_file('conf.d/'.$name.'.ini', true);
+			$this->configCache[$name] = @parse_ini_file('conf.d/'.$name.'.ini', ($section == null ? false : true));
 
 		if (!is_array($this->configCache[$name]))
 			throw new Exception('Configuration file does not exists');
 		
 		// Check if section and key exists
-		if (array_key_exists($section, $this->configCache[$name]))
-			if($key === null)
-				return true;
-			elseif (array_key_exists($key, $this->configCache[$name][$section]))
-				return $this->configCache[$name][$section][$key];
+		if ($section == null)
+		{
+			if (array_key_exists($key, $this->configCache[$name]))
+				return $this->configCache[$name][$key];
+		}
+		else
+		{
+			if (array_key_exists($section, $this->configCache[$name]))
+				if($key === null)
+					return true;
+				elseif (array_key_exists($key, $this->configCache[$name][$section]))
+					return $this->configCache[$name][$section][$key];
+		}
 		return false;
 	}
 }

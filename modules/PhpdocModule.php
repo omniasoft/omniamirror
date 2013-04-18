@@ -2,9 +2,28 @@
 
 class PhpdocModule extends Module
 {
-	public function run($repository, $branch, $path)
+	public function run($info)
 	{
-		printf("       Job for %s/%s with path %s\n", $repository, $branch, basename($path));
+		$pid = $this->generateDoc($info->path, $this->getOutputPath($info));
+		printf("       Job for %s/%s with pid %d\n", $info->repository, $info->branch, $pid);
+		
+	}
+	
+	private function getOutputPath($info)
+	{
+		if ($this->getConfig('phpdoc', null, 'apath'))
+			$paths = array($this->getConfig('phpdoc', null, 'apath'), $info->account, $info->repository, $info->branch);
+		else
+			$paths = array(ROOT, trim($this->getConfig('phpdoc', null, 'rpath'), '/'), $info->account, $info->repository, $info->branch);
+		
+		$r = '';
+		foreach($paths as $path)
+		{
+			$r .= rtrim($path, '/').'/';
+			if (!is_dir($r))
+				mkdir($r);
+		}
+		return $r;
 	}
 	
 	/**
@@ -17,7 +36,7 @@ class PhpdocModule extends Module
 	 *
 	 * @return int      The amount of branches deleted (so false if nothing, else true)
 	 */
-	public function cleanRepository($repository)
+	public function cleanRepository($info)
 	{
 		$deleteNo = 0;
 		
@@ -52,7 +71,7 @@ class PhpdocModule extends Module
 		// Check if dir exists
 		if(!chdir($input))
 			return false;
-		$str = 'phpdoc -d '.$input.' -t '.$output;
+		$str = $this->getConfig('phpdoc', null, 'bin').' -d '.$input.' -t '.$output;
 		$this->execute($str, false);
 		$pid = $this->execute('ps  -A x | grep "'.$str.'" | grep -v grep | nawk \'{print $1}\'');
 		return $pid;

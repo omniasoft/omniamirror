@@ -1,9 +1,9 @@
 # Access restriction
 Order deny,allow
-Deny from all
+Allow from all
 <Files hook.php>
 	Order deny,allow
-	Deny from all
+	Allow from all
 	Allow from 207.97.227.253/32
 	Allow from 50.57.128.197/32
 	Allow from 108.171.174.178/32

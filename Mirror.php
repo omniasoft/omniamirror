@@ -206,7 +206,14 @@ class Mirror extends Base
 	{
 		if ($this->updateBranch($repository, $branch))
 		{
-			call_user_func(array($module, 'run'), $repository, $branch, $this->dirRepo($repository));
+			$info = (object) array(
+				'repository' => $repository,
+				'branch' => $branch,
+				'path' => $this->dirRepo($repository),
+				'account' => $this->github->getUser(),
+				'branches' => $this->getBranches($repository),
+			);
+			call_user_func(array($module, 'run'), $info);
 		}
 	}
 
