@@ -25,9 +25,9 @@ class Github
      * 
      * @return string
      */
-	public function getUrl($action)
+	public function getUrl($action, $pass = true)
 	{
-		return 'https://api.github.com/'.trim($action, '/');
+		return 'https://'.($pass ? $this->user.':'.$this->password.'@' : '').'api.github.com/'.trim($action, '/');
 	}
 
     /**
@@ -39,8 +39,22 @@ class Github
      */
 	private function get($action)
 	{
+		$action = trim($action, '/');
 		if (!array_key_exists($action, $this->cache))
-			$this->cache[$action] = json_decode(file_get_contents($this->getUrl($action)));
+		{
+			$ch = curl_init($this->getUrl($action, false));
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_USERAGENT, 'Github');
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Basic '.base64_encode($this->user.':'.$this->password)));
+	
+			$response = curl_exec($ch);
+			$status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
+				
+			if ($status != 200)
+				return false;
+			$this->cache[$action] = json_decode($response);
+		}
 		return $this->cache[$action];
 	}
 	
@@ -54,16 +68,17 @@ class Github
 	 */
 	private function post($action, $arguments)
 	{
-		$ch = curl_init($this->getUrl($action));
+		$ch = curl_init($this->getUrl($action, false));
 		curl_setopt($ch, CURLOPT_POST, 1);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($arguments));
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, 'Basic '.base64_encode($this->user.':'.$this->password));
+		curl_setopt($ch, CURLOPT_USERAGENT, 'Github');
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Basic '.base64_encode($this->user.':'.$this->password)));
 		
 		$response = curl_exec($ch);
 		$status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
-		
+
 		return ($status != 400 && $status != 422);
 	}
 	
@@ -90,7 +105,7 @@ class Github
 	public function setWebHook($repository, $url)
 	{
 		$hooks = $this->getHooks($repository);
-		foreach($hooks as &$hook)
+		foreach ($hooks as &$hook)
 		{
 			if(isset($hook->config->url) && $hook->config->url == $url)
 				return false;

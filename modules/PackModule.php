@@ -1,28 +1,25 @@
 <?php
 
-class PhpdocModule extends Module
+class PackModule extends Module
 {
 	public function run($info)
 	{
-		$pid = $this->generateDoc($info->path, $this->getOutputPath($info));
-		printf("       Job for %s/%s with pid %d\n", $info->repository, $info->branch, $pid);
-		
+		$ref = explode('/', $info->gitpayload->data->ref);
+		echo $info->path."\n";
+		if ($ref[1] == 'tags')
+		{
+			$tag = $ref[2];
+			printf("       Processing tag %s\n", $tag);
+			
+			$file = $this->compress($info->path, $info->repository.'_'.$tag.'_'.date('YmdHis').'.gz');
+		}
 	}
 	
-	private function getOutputPath($info)
+	private function getReleasePath()
 	{
-		if ($this->getConfig('pack', null, 'apath'))
-			$paths = array($this->getConfig('pack', null, 'apath'), $info->account, $info->repository, $info->branch);
-		else
-			$paths = array(ROOT, trim($this->getConfig('pack', null, 'rpath'), '/'), $info->account, $info->repository, $info->branch);
-		
-		$r = '';
-		foreach($paths as $path)
-		{
-			$r .= rtrim($path, '/').'/';
-			if (!is_dir($r))
-				mkdir($r);
-		}
+		$r = $this->getConfig('pack', null, 'path');
+		if ( ! is_dir($r))
+			mkdir($r);
 		return $r;
 	}
 }

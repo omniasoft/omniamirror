@@ -2,7 +2,7 @@
 
 class Mirror extends Base
 {
-	private $github;
+	public $github;
 	private $actions;
 	
     /**
@@ -71,7 +71,7 @@ class Mirror extends Base
 					}
 					else
 					{
-						$this->forBranch($gitpayload->repository, $gitpayload->branch, $module);
+						$this->forBranch($gitpayload, $module);
 					}
 				}
 			}
@@ -87,6 +87,7 @@ class Mirror extends Base
 	public function getHash($repository)
 	{
 		// Check if dir exists
+		return 0;
 		if (!chdir($this->dirRepo($repository)))
 			return false;
 		return $this->execute('git rev-parse HEAD');
@@ -103,6 +104,7 @@ class Mirror extends Base
      */	
 	private function getBranches($repository)
 	{
+		$cwd = getcwd();
 		if (!chdir($this->dirRepo($repository)))
 			return false;
 		
@@ -118,6 +120,7 @@ class Mirror extends Base
 				continue;	
 			$ret[] = trim($branch);
 		}
+		chdir($cwd);
 		return $ret;
 	}
 	
@@ -130,6 +133,7 @@ class Mirror extends Base
 		$repos = $this->github->getRepositories();
 		foreach ($repos as &$repo)
 		{
+			printf("Updating %s for %s at %s\n", $repo->name, $repo->owner->login, $repo->ssh_url);
 			$this->updateRepository($repo->name, $repo->owner->login, $repo->ssh_url);
 		}
 	}
@@ -146,14 +150,17 @@ class Mirror extends Base
      */	
 	public function updateRepository($name, $user)
 	{
+		$cwd = getcwd();
 		if(is_dir($this->dirRepo($name).'/.git'))
 		{
 			chdir($this->dirRepo($name));
-			$this->execute('git fetch -p --all');
+			$this->execute('git fetch -p --all -t');
+			chdir($cwd);
 			return true;
 		}
 		chdir($this->dirRepos());
 		$ret = $this->execute('git clone '.$this->github->getUrl($user.'/'.$name.'.git'));
+		chdir($cwd);
 		return ($ret[0] != 'f');
 	}
 	
@@ -202,14 +209,15 @@ class Mirror extends Base
      * @param string $branch 
      * @param Module $module 
      */
-	public function forBranch($repository, $branch, $module)
+	public function forBranch($gitpayload, $module)
 	{
-		if ($this->updateBranch($repository, $branch))
+		if ($this->updateBranch($gitpayload->repository, $gitpayload->branch))
 		{
 			$info = (object) array(
-				'repository' => $repository,
-				'branch' => $branch,
-				'path' => $this->dirRepo($repository),
+				'repository' => $gitpayload->repository,
+				'branch' => $gitpayload->branch,
+				'gitpayload' => $gitpayload,
+				'path' => $this->dirRepo($gitpayload->repository),
 				'account' => $this->github->getUser(),
 				'branches' => $this->getBranches($repository),
 			);
@@ -233,15 +241,19 @@ class Mirror extends Base
 		// Check if dir exists
 		if( ! is_dir($this->dirRepo($repository)))
 			return false;
+		$cwd = getcwd();
 		chdir($this->dirRepo($repository));
 		
 		// Checkout this branch and reset it to mirror remote
 		$e = $this->execute('git checkout --force '.$branch);
 		if($e[0] == 'e')
+		{
+			chdir($cwd);
 			return false;
+		}
 		
 		// Hard mirror it
-		$this->execute('git reset --hard origin/HEAD');
+		$this->execute('git reset --hard');
 		$this->execute('git clean -f -d');
 		$this->execute('git pull -q --force');
 		
@@ -253,6 +265,7 @@ class Mirror extends Base
 		}
 		
 		// Assume success
+		chdir($cwd);
 		return true;
 	}
 }

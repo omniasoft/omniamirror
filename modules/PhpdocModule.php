@@ -68,12 +68,14 @@ class PhpdocModule extends Module
      */	
 	public function generateDoc($input, $output)
 	{
+		$cwd = getcwd();
 		// Check if dir exists
 		if(!chdir($input))
 			return false;
 		$str = $this->getConfig('phpdoc', null, 'bin').' -d '.$input.' -t '.$output;
 		$this->execute($str, false);
 		$pid = $this->execute('ps  -A x | grep "'.$str.'" | grep -v grep | nawk \'{print $1}\'');
+		chdir($cwd);
 		return $pid;
 	}
 }

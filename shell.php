@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/php 
 <?php
 if(php_sapi_name() != 'cli') die();
 include('OmniaMirror.php');
@@ -29,6 +29,20 @@ switch($system->getCmd(0))
 		$site = $system->getCmd(2);
 		
 		printf("Deploying %s to %s", $package, $site);
+	break;
+	case 'hook':
+		$account = $system->getCmd(1);
+		$repository = $system->getCmd(2);
+		$url = $system->getCmd(3);
+		
+		// Create github credentials
+		$github = (object) array(
+			'user' => $system->getConfig('github', $account, 'user'),
+			'password' => $system->getConfig('github', $account, 'password')
+		);
+		
+		$mirror = new Mirror($github);
+		$mirror->github->setWebHook($repository, $url);
 	break;
 	default:
 		printf("Unsuported command\n");
