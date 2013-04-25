@@ -92,6 +92,15 @@ class Github
 		return $this->get('/repos/'.$this->user.'/'.$repository.'/hooks');
 	}
 	
+	public function setWebHooks($url)
+	{
+		$repositories = $this->getRepositories();
+		foreach ($repositories as $repository)
+		{
+			$this->setWebHook($repository->name, $url);
+		}
+	}
+	
 	/**
 	 * Set web hook
 	 * 
