@@ -27,7 +27,7 @@ class Github
      */
 	public function getUrl($action)
 	{
-		return 'https://'.$this->user.':'.$this->password.'@api.github.com/'.trim($action, '/');
+		return 'https://api.github.com/'.trim($action, '/');
 	}
 
     /**
@@ -58,6 +58,7 @@ class Github
 		curl_setopt($ch, CURLOPT_POST, 1);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($arguments));
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, 'Basic '.base64_encode($this->user.':'.$this->password));
 		
 		$response = curl_exec($ch);
 		$status = curl_getinfo($ch, CURLINFO_HTTP_CODE);

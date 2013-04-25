@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 if(php_sapi_name() != 'cli') die();
 include('OmniaMirror.php');
@@ -22,6 +23,12 @@ switch($system->getCmd(0))
 		$mirror = new Mirror($github);
 		$mirror->updateRepositories();
 		
+	break;
+	case 'deploy':
+		$package = $system->getCmd(1);
+		$site = $system->getCmd(2);
+		
+		printf("Deploying %s to %s", $package, $site);
 	break;
 	default:
 		printf("Unsuported command\n");
