@@ -58,6 +58,17 @@ switch($system->getCmd(0))
 		$github = new Github($system->getConfig('github', $account, 'user'), $system->getConfig('github', $account, 'password'));
 		$github->setWebHooks($url);
 	break;
+	case 'pack':
+		$dir = $system->getCmd(1);
+		$tag = $system->getCmd(2);
+		
+		// Get directory
+		$r = $system->getConfig('pack', null, 'path');
+		if ( ! is_dir($r))
+			mkdir($r);
+		$r .= '/'.end(explode('/', $dir)).'_'.$tag.'_'.date('YmdHis').'.gz';
+		Base::compress($dir, $r);
+	break;
 	default:
 		printf("Unsuported command\n");
 }

@@ -6,6 +6,10 @@ require('OmniaMirror.php');
 $system = new OmniaMirror();
 $payload = json_decode($_POST['payload']);
 
+// Debug dump
+$info = print_r($payload, true);
+file_put_contents('payloads.log', $info, FILE_APPEND);
+
 // Run the OmniaMirror
 $gitpayload = (object ) array(
 	'branch' => end(explode('/', $payload->ref)),
@@ -14,4 +18,6 @@ $gitpayload = (object ) array(
 	'data' => $payload,
 );
 
+ob_start();
 $system->run($gitpayload);
+file_put_contents('debug.log', ob_get_flush(), FILE_APPEND);

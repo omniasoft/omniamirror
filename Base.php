@@ -126,17 +126,17 @@ class Base
 	 * @param bool $filesOnly True if you want only files in archive excluding directory
 	 * @return string The pathname to the archive
 	 */
-	protected function compress($root, $output)
+	static function compress($root, $output)
 	{
 		if ( ! is_dir($root))
 			return false;
 		
 		// Run the command
 		$cwd = getcwd();
-		$this->execute('tar czf "'.$output.'" --exclude=\'.git\' --exclude=\'.gitignore\' --exclude=\'.gitmodules\' -C '.$root.' .');
+		Base::execute('tar czf "'.$output.'" --exclude=\'.git\' --exclude=\'.gitignore\' --exclude=\'.gitmodules\' -C '.$root.' .');
 		chdir($cwd);
 				
 		// Return output
-		return (file_exists($tmp) && filesize($tmp) > 0);
+		return (file_exists($output) && filesize($output) > 0);
 	}
 }
