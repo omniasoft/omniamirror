@@ -7,8 +7,7 @@ $system = new OmniaMirror();
 $payload = json_decode($_POST['payload']);
 
 // Debug dump
-$info = print_r($payload, true);
-file_put_contents('payloads.log', $info, FILE_APPEND);
+file_put_contents('payloads.log', $_POST['payload']."\n\n", FILE_APPEND);
 
 // Run the OmniaMirror
 $gitpayload = (object ) array(

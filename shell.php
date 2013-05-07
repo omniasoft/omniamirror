@@ -43,6 +43,7 @@ switch($system->getCmd(0))
 		$script  = 'sudo mkdir '.$tmpDir.'; ';
 		$script .= 'cd '.$tmpDir.'; ';
 		$script .= 'sudo tar xvfz /home/deploy/'.basename($package).'; ';
+		$script .= 'sudo chown -R deploy.deploy '.$tmpDir.'; ';
 		$script .= 'sudo mv '.$siteDir.' '.$oldDir.'; ';
 		$script .= 'sudo mv '.$tmpDir.' '.$siteDir.'; ';
 		$script .= 'sudo rm -rf '.$oldDir.'; ';

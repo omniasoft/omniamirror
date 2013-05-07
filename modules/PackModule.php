@@ -10,7 +10,9 @@ class PackModule extends Module
 			$tag = $ref[2];
 			printf("       Processing tag %s\n", $tag);
 			
-			$file = $this->compress($info->path, $this->getReleasePath($info->repository.'_'.$tag.'_'.date('YmdHis').'.gz'));
+			$path = $this->getReleasePath($info->repository.'_'.$tag.'_'.date('YmdHis').'.gz');
+			$file = $this->compress($info->path, $path);
+			printf("       Saved release to: %s\n", $path);
 		}
 		else
 			printf("       Not a tag so skipping\n");
@@ -22,7 +24,6 @@ class PackModule extends Module
 		if ( ! is_dir($r))
 			mkdir($r);
 		$r .= '/'.trim($file, '/');
-		echo $r;
 		return $r;
 	}
 }

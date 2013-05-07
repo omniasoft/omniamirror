@@ -261,7 +261,7 @@ class Mirror extends Base
 		if(file_exists('.gitmodules'))
 		{
 			$this->execute('git submodule init -q');
-			$this->execute('git submodule foreach --recursive git pull --force');
+			$this->execute('git submodule update --recursive');
 		}
 		
 		// Assume success
